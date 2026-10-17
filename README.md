@@ -18,7 +18,7 @@
 * собирает `universal-bypass-tool`;
 * настраивает `iptables`;
 * запускает OpenFlux в режиме **Exit Node**;
-* поддерживает выбор транспорта: **Yandex Docs** или **Mail.ru Docs**.
+* поддерживает выбор транспорта: **Yandex Docs**, **Mail.ru Docs** и **Avito**.
 
 Отдельный VPS для этого способа не нужен.
 
@@ -256,6 +256,23 @@ echo "::add-mask::$DOC_URL"
 
 намеренно не включён.
 
+
+### Avito (рекомендуется, если Mail.ru не работает)
+
+Avito **не требует** заранее созданной ссылки и секрета.
+
+1. Запусти workflow **OpenFlux Exit Node (Avito)**.
+2. В логах найди блок:
+   ```
+   === COPY THIS TO CLIENT ===
+   <длинная строка>
+   ===========================
+   ```
+3. Скопируй строку между этими линиями и передай её клиенту как `--url`.
+
+> Mail.ru сейчас часто возвращает `API returned status 401` (анонимный доступ отключён). Avito в большинстве случаев работает стабильнее.
+
+
 ### Никогда не публикуйте
 
 * Yandex Docs URL;
@@ -306,7 +323,8 @@ moyopenflux/
 ├── .github/
 │   └── workflows/
 │       ├── openflux.yml          (Yandex Docs)
-│       └── openflux-mailru.yml   (Mail.ru Docs)
+│       ├── openflux-mailru.yml   (Mail.ru Docs)
+│       └── openflux-avito.yml    (Avito)
 └── README.md
 ```
 
