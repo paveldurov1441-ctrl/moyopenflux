@@ -1,0 +1,114 @@
+name: OpenFlux Exit Node (Avito)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  openflux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 340
+
+    env:
+      TRANSPORT: avito
+
+    steps:
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set +x
+          sudo apt-get update
+          sudo apt-get install -y git golang-go iptables
+
+      - name: Download OpenFlux
+        shell: bash
+        run: |
+          set +x
+          git clone --depth 1 https://github.com/p1neappleXpress/OpenFlux.git
+          cd OpenFlux
+          echo "OpenFlux commit:"
+          git rev-parse --short HEAD
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 'stable'
+          cache: false
+
+      - name: Verify Go
+        shell: bash
+        run: |
+          set +x
+          go version
+
+      - name: Build OpenFlux
+        shell: bash
+        run: |
+          set +x
+          cd OpenFlux
+          go mod tidy
+          go build -o universal-bypass-tool .
+          chmod +x universal-bypass-tool
+          echo "Build successful."
+
+      - name: Configure iptables
+        shell: bash
+        run: |
+          set +x
+          sudo iptables -C OUTPUT \
+            -p tcp \
+            --tcp-flags RST RST \
+            -j DROP 2>/dev/null || \
+          sudo iptables -A OUTPUT \
+            -p tcp \
+            --tcp-flags RST RST \
+            -j DROP
+          echo "RST DROP rule configured."
+
+      - name: Check raw sockets
+        shell: bash
+        run: |
+          set +x
+          sudo python3 - <<'PY'
+          import socket
+          try:
+              s = socket.socket(
+                  socket.AF_INET,
+                  socket.SOCK_RAW,
+                  socket.IPPROTO_TCP
+              )
+              s.close()
+              print("RAW SOCKET: OK")
+          except Exception as e:
+              print(f"RAW SOCKET: FAILED: {type(e).__name__}: {e}")
+          PY
+
+      - name: Start OpenFlux (Avito)
+        shell: bash
+        run: |
+          set +x
+          cd OpenFlux
+
+          echo "======================================"
+          echo "Starting OpenFlux"
+          echo "Mode: l4 (proxy)"
+          echo "Transport: avito"
+          echo "Debug: disabled"
+          echo "======================================"
+          echo ""
+          echo "IMPORTANT: Look for the line"
+          echo "  === COPY THIS TO CLIENT ==="
+          echo "and copy the room list that appears below it."
+          echo "Pass that string to the client as --url"
+          echo "======================================"
+          echo ""
+
+          # Avito exit creates rooms automatically and prints the list.
+          # No secret URL is required.
+          exec sudo ./universal-bypass-tool \
+            --role=exit \
+            --mode=l4 \
+            --codec=legacy \
+            --transport avito
